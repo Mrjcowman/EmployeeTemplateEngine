@@ -1,6 +1,7 @@
 const Manager = require("./lib/Manager");
 const Engineer = require("./lib/Engineer");
 const Intern = require("./lib/Intern");
+const employeePrompts = require("./lib/employeePrompts");
 const inquirer = require("inquirer");
 const path = require("path");
 const fs = require("fs");
@@ -42,12 +43,13 @@ inquirer.prompt([
         type: "input",
         name: "employeeCount"
     }
-]).then((answers)=>{
+]).then(async (answers)=>{
     employees.push(new Manager(answers.managerName, answers.managerID, answers.managerEmail, answers.managerOffice));
 
     for(let i=0; i<answers.employeeCount; i++){
-        // TODO: build employees
-        console.log("MAKE AN EMPLOYEE HERE");
+        console.log("\nNew Employee:");
+        let role = await getRole();
+        await addEmployee(role);
     }
 
     console.log(employees);
@@ -64,3 +66,32 @@ inquirer.prompt([
 // does not.
 
 // TODO: build employee definition sequence for inquirer, to loop through for each added employee
+async function addEmployee(role){
+    await inquirer.prompt(employeePrompts[role]).then(answers=>{
+        switch(role){
+            case "Engineer": employees.push(new Engineer(answers.name, answers.id, answers.email, answers.github)); break;
+            case "Intern": employees.push(new Intern(answers.name, answers.id, answers.email, answers.school)); break;
+            default: throw new Error("Unknown role selected!");
+        }
+    }).catch(err=>{
+        console.error(err);
+    });
+}
+
+async function getRole(){
+    let role = "";
+    await inquirer.prompt([
+        {
+            message: "What role does this employee fill?",
+            type: "list",
+            choices: ["Engineer", "Intern"],
+            name: "role"
+        }
+    ]).then(answers=>{
+        role = answers.role;
+    }).catch(err=>{
+        console.error(err);
+    })
+
+    return role;
+}

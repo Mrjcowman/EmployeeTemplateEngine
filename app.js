@@ -12,13 +12,11 @@ const outputPath = path.join(OUTPUT_DIR, "team.html");
 const render = require("./lib/htmlRenderer");
 const Employee = require("./lib/Employee");
 
-const employees = [];
+const team = [];
 
-const validateNumber = (input) => {return /\d+/.test(input)||"Please enter a number";};
 
-// TODO: Write code to use inquirer to gather information about the development team members,
-// and to create objects for each team member (using the correct classes as blueprints!)
 
+// Prompt for info about the manager and the team size
 inquirer.prompt([
     {
         message: "What is the name of this team's manager?",
@@ -29,7 +27,7 @@ inquirer.prompt([
         message: "What is the ID number of this team's manager?",
         type: "input",
         name: "managerID",
-        validate: validateNumber
+        validate: employeePrompts.validateNumber
     },
     {
         message: "What is the email of this team's manager?",
@@ -43,14 +41,14 @@ inquirer.prompt([
         message: "What is the office number of this team's manager?",
         type: "input",
         name: "managerOffice",
-        validate: validateNumber
+        validate: employeePrompts.validateNumber
     },
     {
         message: "How many employees are part of this manager's team?",
         type: "input",
         name: "employeeCount",
         validate: function(input){
-            let isANumber = validateNumber(input);
+            let isANumber = employeePrompts.validateNumber(input);
             if(isANumber){
                 if(input>0){
                     return true;
@@ -63,37 +61,38 @@ inquirer.prompt([
         }
     }
 ]).then(async (answers)=>{
-    employees.push(new Manager(answers.managerName, answers.managerID, answers.managerEmail, answers.managerOffice));
+    // Add the manager to the team array
+    team.push(new Manager(answers.managerName, answers.managerID, answers.managerEmail, answers.managerOffice));
 
+    // For each employee, prompt for info and add to the team array
     for(let i=0; i<answers.employeeCount; i++){
         console.log("\nNew Employee:");
         let role = await getRole();
         await addEmployee(role);
     }
 
-    let html = render(employees);
+    // Render the HTML page with the team info
+    let html = render(team);
 
+    // Create the output folder if it doesn't already exist
     await fs.readdir("output/", err=>{
         if(err) fs.mkdirSync("output/");
     })
 
+    // Write the html file to the output folder
     fs.writeFile("output/team.html", html, "utf8", (err)=>{
         if(err) throw err;
     })
 
 })
 
-// After the user has input all employees desired, call the `render` function (required
-// above) and pass in an array containing all employee objects; the `render` function will
-// generate and return a block of HTML including templated divs for each employee!
 
-
-// TODO: build employee definition sequence for inquirer, to loop through for each added employee
+// Prompt for info about an employee of the given role, then push it onto the team array
 async function addEmployee(role){
     await inquirer.prompt(employeePrompts[role]).then(answers=>{
         switch(role){
-            case "Engineer": employees.push(new Engineer(answers.name, answers.id, answers.email, answers.github)); break;
-            case "Intern": employees.push(new Intern(answers.name, answers.id, answers.email, answers.school)); break;
+            case "Engineer": team.push(new Engineer(answers.name, answers.id, answers.email, answers.github)); break;
+            case "Intern": team.push(new Intern(answers.name, answers.id, answers.email, answers.school)); break;
             default: throw new Error("Unknown role selected!");
         }
     }).catch(err=>{
@@ -101,6 +100,7 @@ async function addEmployee(role){
     });
 }
 
+// Prompt for the employee role and return it
 async function getRole(){
     let role = "";
     await inquirer.prompt([
